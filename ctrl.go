@@ -3,9 +3,13 @@ package lifectrl
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -19,7 +23,48 @@ type (
 		To    time.Time
 		Desc  string
 	}
+
+	StageFile struct {
+		Stages []Stage
+	}
 )
+
+func NewStageFile(dir, out string) error {
+	stages := []Stage{}
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range files {
+		fh, err := os.Open(path.Join(dir, i.Name()))
+		if err != nil {
+			return err
+		}
+		stage, err := ParseFile(fh)
+		if err != nil {
+			return err
+		}
+
+		stages = append(stages, stage)
+	}
+
+	f := StageFile{
+		Stages: stages,
+	}
+
+	j, err := json.Marshal(f)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(out, j, 0755)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func CleanLine(l []byte) []byte {
 	return bytes.TrimSpace(l)

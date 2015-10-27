@@ -2,11 +2,31 @@ package lifectrl
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 	"time"
 )
+
+func newTestEnv(t *testing.T) string {
+	path, err := ioutil.TempDir(".", "tmp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return path
+}
+
+func removeTestEnv(t *testing.T, path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func equalStage(s1, s2 Stage) error {
 	if s1.Title != s2.Title ||
@@ -73,5 +93,46 @@ func Test_ParseFile_Fail(t *testing.T) {
 	_, err = ParseFile(reader)
 	if err.Error() != "Missing description" {
 		t.Fatal("Expect error was", err)
+	}
+}
+
+func Test_NewStageFile_OK(t *testing.T) {
+	tmpPath := newTestEnv(t)
+	defer removeTestEnv(t, tmpPath)
+
+	inPath := path.Join(tmpPath, "test.md")
+	input := []byte("Title:Funky bacon!\nFrom:1/2010\nTo:1/2011\nwhy?")
+	err := ioutil.WriteFile(inPath, input, 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outPath := path.Join(tmpPath, "output.json")
+	err = NewStageFile(tmpPath, outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	in, err := ioutil.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := StageFile{}
+	err = json.Unmarshal(in, &result)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expect := Stage{
+		Title: "Funky bacon!",
+		From:  time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC),
+		To:    time.Date(2011, 1, 1, 0, 0, 0, 0, time.UTC),
+		Desc:  "<p>why?</p>\n",
+	}
+
+	err = equalStage(expect, result.Stages[0])
+	if err != nil {
+		t.Fatal(err)
 	}
 }
