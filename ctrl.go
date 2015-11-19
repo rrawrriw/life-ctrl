@@ -12,8 +12,6 @@ import (
 	"path"
 	"strconv"
 	"time"
-
-	"github.com/knieriem/markdown"
 )
 
 type (
@@ -29,21 +27,21 @@ type (
 	}
 )
 
-func NewStageFile(dir, out string) error {
+func NewStageJSON(dir string) ([]byte, error) {
 	stages := []Stage{}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 
 	for _, i := range files {
 		fh, err := os.Open(path.Join(dir, i.Name()))
 		if err != nil {
-			return err
+			return []byte{}, err
 		}
 		stage, err := ParseFile(fh)
 		if err != nil {
-			return err
+			return []byte{}, err
 		}
 
 		stages = append(stages, stage)
@@ -54,6 +52,16 @@ func NewStageFile(dir, out string) error {
 	}
 
 	j, err := json.Marshal(f)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return j, nil
+}
+
+func NewStageFile(dir, out string) error {
+
+	j, err := NewStageJSON(dir)
 	if err != nil {
 		return err
 	}
@@ -145,15 +153,16 @@ func ParseFile(in io.Reader) (Stage, error) {
 	}
 	stage.To = to
 
-	p := markdown.NewParser(&markdown.Extensions{})
-	html := bytes.NewBuffer([]byte{})
-	p.Markdown(reader, markdown.ToHTML(html))
-
-	if html.Len() < 2 {
+	desc := make([]byte, reader.Buffered())
+	_, err = reader.Read(desc)
+	if err != nil {
+		return Stage{}, err
+	}
+	if len(desc) < 2 {
 		return Stage{}, errors.New("Missing description")
 	}
 
-	stage.Desc = html.String()
+	stage.Desc = string(desc)
 
 	return stage, nil
 }
