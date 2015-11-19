@@ -53,7 +53,7 @@ func Test_ParseFile_OK(t *testing.T) {
 		Title: "Test",
 		From:  time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC),
 		To:    time.Date(2010, time.February, 1, 0, 0, 0, 0, time.UTC),
-		Desc:  "<h1>Title</h1>\n",
+		Desc:  "Title\n=====",
 	}
 
 	if err = equalStage(expect, stage); err != nil {
@@ -128,7 +128,7 @@ func Test_NewStageFile_OK(t *testing.T) {
 		Title: "Funky bacon!",
 		From:  time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC),
 		To:    time.Date(2011, 1, 1, 0, 0, 0, 0, time.UTC),
-		Desc:  "<p>why?</p>\n",
+		Desc:  "why?",
 	}
 
 	err = equalStage(expect, result.Stages[0])
